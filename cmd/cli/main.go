@@ -1,51 +1,58 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/russross/blackfriday/v2"
 )
 
 func main() {
-	// Define input and output directories
-	inputDir := "input"
-	outputDir := "output"
+	var inputDir, outputDir string
+	flag.StringVar(&inputDir, "input", "input", "Directory containing Markdown files")
+	flag.StringVar(&outputDir, "output", "output", "Output directory for generated HTML files")
+	flag.Parse()
 
-	// Read Markdown files from input directory
+	if inputDir == "" {
+		fmt.Println("Please specify the directory containing Markdown files using the -input flag.")
+		os.Exit(1)
+	}
+
 	files, err := ioutil.ReadDir(inputDir)
 	if err != nil {
 		fmt.Println("Error reading input directory:", err)
 		os.Exit(1)
 	}
 
-	// Loop through Markdown files
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".md") {
-			// Read Markdown content
-			mdContent, err := ioutil.ReadFile(inputDir + "/" + file.Name())
-			if err != nil {
-				fmt.Println("Error reading Markdown file:", err)
-				continue
-			}
-
-			// Convert Markdown to HTML (basic conversion)
-			htmlContent := []byte("<html><body>" + string(mdContent) + "</body></html>")
-
-			// Generate HTML page
-			htmlFileName := strings.TrimSuffix(file.Name(), ".md") + ".html"
-			htmlFilePath := outputDir + "/" + htmlFileName
-
-			// Write HTML to file
-			err = ioutil.WriteFile(htmlFilePath, htmlContent, 0644)
-			if err != nil {
-				fmt.Println("Error writing HTML file:", err)
-				continue
-			}
-
-			fmt.Println("Generated HTML file:", htmlFileName)
+			processMarkdownFile(filepath.Join(inputDir, file.Name()), outputDir)
 		}
 	}
 
 	fmt.Println("Website generation completed.")
+}
+
+func processMarkdownFile(mdFilePath, outputDir string) {
+	mdContent, err := ioutil.ReadFile(mdFilePath)
+	if err != nil {
+		fmt.Printf("Error reading Markdown file %s: %v\n", mdFilePath, err)
+		return
+	}
+
+	htmlContent := blackfriday.Run(mdContent)
+
+	htmlFileName := strings.TrimSuffix(filepath.Base(mdFilePath), ".md") + ".html"
+	htmlFilePath := filepath.Join(outputDir, htmlFileName)
+
+	if err := ioutil.WriteFile(htmlFilePath, htmlContent, 0644); err != nil {
+		fmt.Printf("Error writing HTML file %s: %v\n", htmlFileName, err)
+		return
+	}
+
+	fmt.Println("Generated HTML file:", htmlFileName)
 }
