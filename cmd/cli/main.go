@@ -13,7 +13,7 @@ import (
 
 func main() {
 	var inputDir, outputDir string
-	flag.StringVar(&inputDir, "input", "input", "Directory containing Markdown files")
+	flag.StringVar(&inputDir, "input", "", "Directory containing Markdown files")
 	flag.StringVar(&outputDir, "output", "output", "Output directory for generated HTML files")
 	flag.Parse()
 
@@ -26,6 +26,14 @@ func main() {
 	if err != nil {
 		fmt.Println("Error reading input directory:", err)
 		os.Exit(1)
+	}
+
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		err = os.MkdirAll(outputDir, 0755)
+		if err != nil {
+			fmt.Println("Error creating output directory:", err)
+			os.Exit(1)
+		}
 	}
 
 	for _, file := range files {
@@ -49,7 +57,8 @@ func processMarkdownFile(mdFilePath, outputDir string) {
 	htmlFileName := strings.TrimSuffix(filepath.Base(mdFilePath), ".md") + ".html"
 	htmlFilePath := filepath.Join(outputDir, htmlFileName)
 
-	if err := ioutil.WriteFile(htmlFilePath, htmlContent, 0644); err != nil {
+	err = ioutil.WriteFile(htmlFilePath, htmlContent, 0644)
+	if err != nil {
 		fmt.Printf("Error writing HTML file %s: %v\n", htmlFileName, err)
 		return
 	}
